@@ -1,5 +1,4 @@
 //go:build !linux
-// +build !linux
 
 package main
 
@@ -80,7 +79,7 @@ func (c *PcapClient) getAvailableDevices() error {
 }
 
 func (c *PcapClient) getHandler(device, filter string) (*pcap.Handle, error) {
-	handle, err := pcap.OpenLive(device, 65535, false, pcap.BlockForever)
+	handle, err := pcap.OpenLive(device, 65575, false, pcap.BlockForever)
 	if err != nil {
 		return nil, err
 	}

@@ -1,11 +1,11 @@
 //go:build linux
-// +build linux
 
 package main
 
 import (
 	"context"
 	"sync"
+	"time"
 
 	"github.com/pkg/errors"
 
@@ -14,6 +14,12 @@ import (
 	"github.com/google/gopacket/layers"
 	"github.com/google/gopacket/pcap"
 	"golang.org/x/net/bpf"
+)
+
+const (
+	defaultBlockNum    = 16
+	defaultPollTimeout = 500 * time.Millisecond
+	deviceAny          = "any"
 )
 
 type pcapHandler struct {
@@ -67,12 +73,12 @@ func (c *PcapClient) getAvailableDevices() error {
 	for _, device := range devs {
 		handler, err := c.getHandler(device.Name)
 		if err != nil {
-			return errors.Wrapf(err, "get device(%s) name failed", device.Name)
+			return errors.Wrapf(err, "get device (%s) name failed", device.Name)
 		}
 
 		if c.bpfFilter != "" {
 			if err = c.setBPFFilter(handler, c.bpfFilter); err != nil {
-				return errors.Wrapf(err, "set bpf-filter(%s) failed", c.bpfFilter)
+				return errors.Wrapf(err, "set bpf-filter (%s) failed", c.bpfFilter)
 			}
 		}
 
@@ -89,7 +95,13 @@ func (c *PcapClient) getAvailableDevices() error {
 }
 
 func (c *PcapClient) getHandler(device string) (*afpacket.TPacket, error) {
-	return afpacket.NewTPacket(afpacket.OptInterface(device))
+	blockNumOpt := afpacket.OptNumBlocks(defaultBlockNum)
+	pollTimeout := afpacket.OptPollTimeout(defaultPollTimeout)
+
+	if device == deviceAny {
+		return afpacket.NewTPacket(blockNumOpt, pollTimeout)
+	}
+	return afpacket.NewTPacket(afpacket.OptInterface(device), blockNumOpt, pollTimeout)
 }
 
 func (c *PcapClient) setBPFFilter(h *afpacket.TPacket, filter string) error {
